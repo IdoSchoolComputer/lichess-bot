@@ -6,13 +6,13 @@ Using `lichess-bot` + an LLM (OpenRouter or Grok/xAI) as the "engine."
 
 ## 1. Lichess Account & Token
 
-- [ ] Create a **brand new** Lichess account dedicated to the bot (never use your main/personal account — bot conversion is irreversible and changes what the account can do)
-- [ ] Log into that account
-- [ ] Go to **Account Settings → API access tokens** (or `lichess.org/account/oauth/token`)
-- [ ] Create a new **personal access token**
-- [ ] Select scope: `bot:play` (this is the only scope lichess-bot strictly needs)
-- [ ] Copy the token somewhere safe — Lichess only shows it once
-- [ ] Do **not** commit this token to git or share it publicly
+- [V] Create a **brand new** Lichess account dedicated to the bot (never use your main/personal account — bot conversion is irreversible and changes what the account can do)
+- [V] Log into that account
+- [V] Go to **Account Settings → API access tokens** (or `lichess.org/account/oauth/token`)
+- [V] Create a new **personal access token**
+- [V] Select scope: `bot:play` (this is the only scope lichess-bot strictly needs)
+- [V] Copy the token somewhere safe — Lichess only shows it once
+- [V] Do **not** commit this token to git or share it publicly
 
 ---
 

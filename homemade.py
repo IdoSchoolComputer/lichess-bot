@@ -16,10 +16,26 @@ import logging
 # logger.debug("message") will only print "message" if verbose logging is enabled.
 logger = logging.getLogger(__name__)
 
+# homemade.py (existing imports already at the top)
 
-class ExampleEngine(MinimalEngine):
-    """An example engine that all homemade engines inherit."""
+class LLMEngine(ExampleEngine):
+    """A homemade engine that uses an LLM to select moves."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.client = SomeLLMClient(api_key="...")  # or load from config/env
+
+    def search(self, board, time_limit, ponder, draw_offered, root_moves):
+        legal = root_moves if isinstance(root_moves, list) else list(board.legal_moves)
+        prompt = f"Position (FEN): {board.fen()}\nChoose the best move in UCI format from: {[m.uci() for m in legal]}"
+        response = self.client.query(prompt)
+        move = self._parse_and_validate(response, legal, board)
+        return PlayResult(move, None, draw_offered=draw_offered)
+
+    def _parse_and_validate(self, response, legal_moves, board):
+        # extract a UCI move string from the LLM's response text,
+        # then confirm it's actually legal before returning it
+        ...
 
 # Bot names and ideas from tom7's excellent eloWorld video
 
