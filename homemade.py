@@ -7,7 +7,13 @@ import chess
 from chess.engine import PlayResult, Limit
 import random
 from lib.engine_wrapper import MinimalEngine
-from homemade import ExampleEngine
+from abc import ABC
+
+
+class ExampleEngine(MinimalEngine, ABC):
+    """Base class for homemade engines."""
+
+    pass
 from lib.lichess_types import MOVE, HOMEMADE_ARGS_TYPE
 import logging
 from openai import OpenAI
@@ -30,27 +36,43 @@ class LLMEngine(ExampleEngine):
 
     def search(self, board, time_limit, ponder, draw_offered, root_moves):
         legal = root_moves if isinstance(root_moves, list) else list(board.legal_moves)
-        prompt = f"Position (FEN): {board.fen()}\nChoose the best move in UCI format from: {[m.uci() for m in legal]}"
+        prompt = (
+       f"Position (FEN): {board.fen()}\n"
+       f"Legal moves: {[m.uci() for m in legal]}\n"
+       f"Pick exactly one move from the Legal moves list above. "
+       f"Do not choose any move not in that list."
+       )
         response = self.client.chat.completions.create(
-            model="moonshotai/kimi-k2-instruct-0905",
-            messages=[ 
-            {"role": "system", "content": "You are a professional chess player. Make the best move"},
-            {"role": "user", "content": prompt}
+            model="openai/gpt-oss-120b",
+            messages=[
+                {"role": "system", "content": "You are a professional chess player. Reply with ONLY the move in UCI format, nothing else."},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.2,       # low = more consistent/deterministic moves, less "creative" blundering
-            max_tokens=50,         # you just need a short move, no need to allow long rambling
-            top_p=0.9,             # optional, works alongside temperature to trim unlikely tokens
-            stop=["\n"],           # cuts it off after one line, useful if you're forcing "just the move"
-            stream=False,          # set True if you want to stream tokens as they're generated
-            seed=42,         )
+            temperature=0.2,
+            max_tokens=1500,
+            top_p=0.9,
+            stream=False,
+            seed=42,
+            reasoning_effort="medium"
+        )
+        
         move = self._parse_and_validate(response, legal, board)
+        logger.debug(f"did {move}")
         return PlayResult(move, None, draw_offered=draw_offered)
 
     def _parse_and_validate(self, response, legal_moves, board):
-        text = response.choices[0].message.content.strip()
-        tokens = text.replace(",", " ","|").split()  # split on whitespace, strip stray punctuation
+        choice = response.choices[0]
+        text = (choice.message.content or "").strip()
+        finish_reason = choice.finish_reason
+
+        if not text:
+            logger.warning(f"Empty LLM response (finish_reason={finish_reason}) — playing random move instead")
+            return random.choice(legal_moves)
+
+        tokens = text.replace(",", " ").replace("|", " ").split()
         for move in legal_moves:
             if move.uci() in tokens:
                 return move
+
         logger.info(f"Could not parse LLM move from: {text!r} — playing random move instead")
         return random.choice(legal_moves)
